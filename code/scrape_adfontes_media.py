@@ -119,12 +119,37 @@ def get_reliability_and_bias_info(rated_sources):
 
     return scraped_info
 
+def clean_data(scraped_info):
+    """
+    Clean and format the scraped data into a DataFrame, remove duplicates, and ensure consistency for incorporating to other datasets (print media)
 
-#if __name__ == "__main__":
+    Parameters:
+    ----------
+    - scraped_info (defaultdict): a dictionary containing the AdFontes data with site names with reliability and bias scores
+
+    Returns:
+    ---------
+    - DataFrame: cleaned df ready for export
+    """
+    df = pd.DataFrame.from_dict(scraped_info, orient="index").reset_index()
+    df = df.rename(columns={"index": "source"})
+    df["source"] = df["source"].str.replace(" Bias and Reliability", "").str.lower().str.replace(" ", "-")
+
+    # Filter to keep only unique source entries (prioritize "-website" if duplicates exist)
+    base_names = df["source"][df["source"].str.contains("website")].str.replace("-website", "").to_list()
+    base_names_pattern = '|'.join(re.escape(name) for name in base_names)
     
+    # Keep only the 'website' versions or non-duplicates
+    df = df[~df["source"].str.contains(base_names_pattern) | 
+            (df["source"].str.contains(base_names_pattern) & df["source"].str.contains("-website"))]
+    
+    df["source"] = df["source"].str.replace("-website", "")
+    
+    return df
+
+if __name__ == "__main__":
     rated_sources = get_all_rated_sources()
     scraped_info = get_reliability_and_bias_info(rated_sources)
-    scraped_info_df = pd.DataFrame.from_dict(scraped_info, orient="index").reset_index()
-    scraped_info_df = scraped_info_df.rename(columns = {"index":"source"})
-    scraped_info_df.to_csv("ad_fontes_media_sources_ratings.csv", index=False)
+    cleaned_data_df = clean_data(scraped_info)
+    cleaned_data_df.to_csv("adfontes_cleaned_sources_ratings.csv", index=False)
     print("--- Script Complete ---")
