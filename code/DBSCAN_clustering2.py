@@ -96,13 +96,34 @@ def plot_dbscan_clusters(embeddings, labels, model_name, save_path=None):
     plt.show()
 
 
+def save_cluster_sizes_to_file(cluster_sizes, file_path):
+    """
+    Save cluster sizes to a file.
+
+    Parameters:
+    - cluster_sizes: dict
+        Dictionary containing cluster IDs and their sizes.
+    - file_path: str
+        Path to the output file.
+
+    Returns:
+    - None. Writes cluster sizes to the specified file.
+    """
+    with open(file_path, "w") as f:
+        f.write("Cluster ID,Size\n")
+        for cluster_id, size in cluster_sizes.items():
+            f.write(f"{cluster_id},{size}\n")
+
+
 # Improved Hyperparameter Grid for DBSCAN
 eps_values = np.linspace(0.1, 1.0, 10)  # Epsilon from 0.1 to 1.0 in 10 steps
 min_samples_values = [3, 5, 10, 20]  # Different min_samples values
 normalize_data_options = [True]  # Assume normalization is critical for cosine similarity
 
-# Define the output directory
+# Define the output directories
 output_plot_dir = "/mounts/data/proj/molly/media_bias/output/plots"
+output_cluster_size_dir = "/mounts/data/proj/molly/media_bias/output/cluster_sizes"
+os.makedirs(output_cluster_size_dir, exist_ok=True)  # Ensure the directory exists
 
 # Perform DBSCAN clustering and visualization
 for normalize_data in normalize_data_options:
@@ -125,6 +146,16 @@ for normalize_data in normalize_data_options:
                 print(f"Model: {model_name}")
                 print(f" - Number of clusters: {n_clusters}")
                 print(f" - Number of noise points: {n_noise}")
+
+                # Compute cluster sizes
+                cluster_sizes = {}
+                for cluster_id in set(labels):
+                    cluster_sizes[cluster_id] = list(labels).count(cluster_id)
+
+                # Save cluster sizes to a file
+                cluster_size_file = f"{output_cluster_size_dir}/{model_name}_eps{eps:.2f}_min{min_samples}_norm{normalize_data}.csv"
+                save_cluster_sizes_to_file(cluster_sizes, cluster_size_file)
+                print(f"Cluster sizes saved to {cluster_size_file}")
 
                 # Visualize and save the clustering results
                 plot_dbscan_clusters(
