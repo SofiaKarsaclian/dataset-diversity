@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from vendi_score import vendi
 from sklearn.metrics.pairwise import cosine_similarity
-
+import pickle
 
 class SubsetGenerator:
     def __init__(self, df):
@@ -214,10 +214,18 @@ class SubsetGenerator:
 
     def save_subsamples(self, subsamples, dataset_name, base_path="data/subsamples"):
         """
-        Save subsets to CSV files.
+        Save subsets to pickle files.
         """
-        path = os.path.join(base_path, dataset_name)
-        os.makedirs(path, exist_ok=True)
+        os.makedirs(base_path, exist_ok=True)
 
-        for subset_name, value in subsamples.items():
-            value['data'].to_csv(os.path.join(path, f"{subset_name}.csv"), index=False)
+        # Define the file path for saving
+        pickle_file_path = os.path.join(base_path, f"{dataset_name}_subsamples.pkl")
+
+        # Save the subsamples dictionary to a pickle file
+        with open(pickle_file_path, 'wb') as f:
+            pickle.dump(subsamples, f)
+
+        print(f"Subsamples saved to: {pickle_file_path}")
+
+        # for subset_name, value in subsamples.items():
+        #     value['data'].to_csv(os.path.join(path, f"{subset_name}.csv"), index=False)

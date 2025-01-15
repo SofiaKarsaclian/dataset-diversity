@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 
 source_mapping = {
@@ -10,11 +9,8 @@ source_mapping = {
 
 bias_mapping = {"Biased" : 1, "Non-biased": 0}
 
-# get absolute path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-folder_path = os.path.join(project_root, 'data', 'raw', 'babe.csv')
 
-df = pd.read_csv(folder_path, delimiter=";")
+df = pd.read_csv("data/raw/babe.csv", delimiter=";")
 
 # select relevant columns
 df = df[["text", "outlet", "label_bias"]].rename(columns={"outlet": "source", "label_bias": "label"})
@@ -28,15 +24,10 @@ df["label"] = df["label"].astype("int64")
 print(f"Removing from the daily-stormer: {len(df[df["source"] == "daily-stormer"])} rows")
 df = df[df["source"] != "daily-stormer"] # exclude
 
-adfontes_path = os.path.join(project_root, 'data', 'adfontes_clean.csv')
-adfontes = pd.read_csv(adfontes_path)
+adfontes = pd.read_csv("data/adfontes_clean.csv")
 
 df = df.merge(adfontes, on='source', how='left')
 
-output_dir = os.path.join(project_root, 'data', 'processed')
-os.makedirs(output_dir, exist_ok=True)
-
-output_path = os.path.join(output_dir, "babe.csv")
-df.to_csv(output_path, index=False)
+df.to_csv("data/processed/babe.csv", index=False)
 
 print("Processed and saved dataset")

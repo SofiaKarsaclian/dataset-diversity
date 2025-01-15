@@ -2,11 +2,8 @@ import os
 import pandas as pd
 import json
 
-# Get the absolute path of the project root 
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-# Adjust folder_path to be relative to the project root
-folder_path = os.path.join(project_root, 'data', 'raw', 'basil')
+folder_path = "data/raw/basil"
 
 # List to store all rows across files
 all_rows = []
@@ -55,7 +52,7 @@ else:
     df = pd.DataFrame(all_rows)
 
     # Load and merge with AdFontes data for sources
-    ad_fontes = pd.read_csv(os.path.join(project_root, 'data', 'adfontes_clean.csv'))
+    ad_fontes = pd.read_csv('data/adfontes_clean.csv')
     df = df.merge(ad_fontes, on='source', how='left')
 
     # Check if there are any missing 'text' values
@@ -64,10 +61,8 @@ else:
 
     print(f"Rows with missing 'text' after drop: {df['text'].isna().sum()}")
 
-    output_dir = os.path.join(project_root, 'data', 'processed')
-    os.makedirs(output_dir, exist_ok=True)
 
     # Save the processed dataframe
-    df.to_csv(os.path.join(output_dir, "basil.csv"), index=False)
+    df.to_csv("data/processed/basil.csv", index=False)
 
     print("Processed and saved dataset")

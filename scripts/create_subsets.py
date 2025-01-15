@@ -1,27 +1,40 @@
 import pandas as pd
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.subset_utils import SubsetGenerator
 from sklearn.model_selection import train_test_split
 
+
 datasets = {
-    "annomatic": pd.read_parquet('annomatic_full.parquet'),
-    "babe": pd.read_parquet('babe_full.parquet'),
-    "basil": pd.read_parquet('basil_full.parquet')
+    "annomatic": pd.read_parquet('data/enriched/annomatic_full.parquet'),
+    "babe": pd.read_parquet('data/enriched/babe_full.parquet'),
+    "basil": pd.read_parquet('data/enriched/basil_full.parquet')
 }
 
+# keep only majority vote 
+columns_to_remove = ["entities_gliner", "entities_spaCy", "entities_flair"]
+for name, df in datasets.items():
+    datasets[name] = df.drop(columns=columns_to_remove, errors='ignore')
+
 # Split train-test 
-def split_train_test(df, test_size=500):
-    df['stratify_col'] = df['label'].astype(str) + '_' + df['source'] + '_' + df['topic']
+def split_train_test(df, test_size=500):    
+    df['stratify_col'] = df['label'].astype(str) #+ '_' + df['source'] + '_' + df['topic']
     train_df, test_df = train_test_split(df, test_size=test_size, stratify=df['stratify_col'], random_state= 42)
     return train_df, test_df
 
 babe_train, babe_test = split_train_test(datasets['babe'])
 basil_train, basil_test = split_train_test(datasets['basil'])
 
-datasets['babe'] = babe_train
+datasets['babe'] = babe_train 
 datasets['basil'] = basil_train
 
-babe_test.to_parquet("../data/processed/test_sets/babe_test.parquet")
-basil_test.to_parquet("../data/processed/test_sets/basil_test.parquet")
+output_dir = "data/processed/test_sets"
+os.makedirs(output_dir, exist_ok=True)
+
+# Save the parquet files
+babe_test.to_parquet(os.path.join(output_dir, "babe_test.parquet"))
+basil_test.to_parquet(os.path.join(output_dir, "basil_test.parquet"))
 
 print("Generated split and saved test sets...")
 
@@ -46,8 +59,8 @@ for dataset_name, df in datasets.items():
         score_function=subset_generator.vendi_score_source
     )
     source_scores = subset_generator.process_vendi_scores(source_subsamples)
-    source_scores.to_csv(f"../data/subsamples/div_{dataset_name}_source.csv", index=False)
     subset_generator.save_subsamples(source_subsamples, f"{dataset_name}_source_subsamples")
+    source_scores.to_csv(f"data/subsamples/div_{dataset_name}_source.csv", index=False)
 
     # Topic subsets
     print(f"  Generating topic-based subsets for {dataset_name}")
@@ -60,8 +73,8 @@ for dataset_name, df in datasets.items():
         embedding_column="sentence_embedding"
     )
     topic_scores = subset_generator.process_vendi_scores(topic_subsamples)
-    topic_scores.to_csv(f"../data/subsamples/div_{dataset_name}_topic.csv", index=False)
     subset_generator.save_subsamples(topic_subsamples, f"{dataset_name}_topic_subsamples")
+    topic_scores.to_csv(f"data/subsamples/div_{dataset_name}_topic.csv", index=False)
 
     print(f"  Finished processing {dataset_name}\n")
 

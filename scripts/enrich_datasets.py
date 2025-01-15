@@ -7,10 +7,9 @@ from utils.entity_extractor import EntityExtractor
 from utils.topic_modeling import TopicModeling
 
 datasets_file_paths = {
-    # "annomatic": "data/processed/annomatic.csv",
-    # "babe": "data/processed/babe.csv",
-    # "basil": "data/processed/basil.csv"
-    "test": "data/processed/test.csv"
+    "annomatic": "data/processed/annomatic.csv",
+    "babe": "data/processed/babe.csv",
+    "basil": "data/processed/basil.csv"
 }
 output_dir = "data/enriched/"
 os.makedirs(output_dir, exist_ok=True)
@@ -27,24 +26,24 @@ def enrich_dataset(name, path):
     print(f"Processing dataset: {name}")
     df = pd.read_csv(path)
     
-    # Step 1: Extract Entities
+    # Extract Entities
     print(f"Extracting entities for {name}...")
     processed_data = entity_extractor.process_data(df)
 
     # Cluster the entities
     df_entities = entity_extractor.cluster_entities(processed_data)
     
-    # Step 2: Perform Topic Modeling
+    # Topic Modeling
     print(f"Performing topic modeling for {name}...")
     
     # Process dataset with TopicModeling
     df_topics = topic_modeling.run(df, name)
 
-    # Step 3: Merge Results on `text`
+    # Merge Results on `text`
     print(f"Merging results for {name}...")
     df_enriched = pd.merge(df_entities, df_topics, on="text", how="inner")
     
-    # Step 4: Save Enriched Dataset
+    # Save Enriched Dataset
     enriched_path = os.path.join(output_dir, f"{name}_full.parquet")
     df_enriched.to_parquet(enriched_path, index=False)
     print(f"Enriched dataset saved to: {enriched_path}")
