@@ -43,7 +43,7 @@ def enrich_dataset(name, path):
     print(f"Merging results for {name}...")
     df_enriched = pd.merge(df_entities, df_topics, on="text", how="inner")
     
-    # Save Enriched Dataset
+    # # Save Enriched Dataset
     enriched_path = os.path.join(output_dir, f"{name}_full.parquet")
     df_enriched.to_parquet(enriched_path, index=False)
     print(f"Enriched dataset saved to: {enriched_path}")

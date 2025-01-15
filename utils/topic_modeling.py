@@ -17,15 +17,19 @@ class TopicModeling:
         self.output_dir = output_dir
         self.embedding_model = SentenceTransformer(embedding_model_name)
 
-        # Quantize model for faster processing without CUDA
-        transformer_model = self.embedding_model[0]
-
-        quantized_transformer = torch.quantization.quantize_dynamic(
-            transformer_model,
-            {torch.nn.Linear},  # Quantize only linear layers
-            dtype=torch.qint8
-        )
-        self.embedding_model[0] = quantized_transformer
+        # Check if CUDA is available
+        if torch.cuda.is_available():
+            print("CUDA is available. Skipping quantization.")
+        else:
+            # Quantize model for faster processing if no GPU
+            print("CUDA is not available. Quantizing the model.")
+            transformer_model = self.embedding_model[0]
+            quantized_transformer = torch.quantization.quantize_dynamic(
+                transformer_model,
+                {torch.nn.Linear},  # Quantize only linear layers
+                dtype=torch.qint8
+            )
+            self.embedding_model[0] = quantized_transformer
 
         self.topic_embeddings = {}
 
@@ -61,6 +65,22 @@ class TopicModeling:
             verbose=True
         )
         os.makedirs(self.output_dir, exist_ok=True)
+
+    def save_model(self, model_name):
+        """
+        Save both the BERTopic model and the embedding model after fitting.
+        """
+        models_dir = os.path.join(self.output_dir, 'models')
+        os.makedirs(models_dir, exist_ok=True)
+
+        # Check if the model has been fitted before saving
+        if not hasattr(self.topic_model, 'topic_labels_'):
+            raise Exception("The BERTopic model is not yet fitted. Please fit the model before saving.")
+
+        # Save the BERTopic model (with serialization set to 'pytorch')
+        model_dir = os.path.join(models_dir, f"{model_name}_model")
+        self.topic_model.save(model_dir, serialization="pytorch", save_ctfidf=True, save_embedding_model="sentence-transformers/all-MiniLM-L6-v2")
+        print(f"BERTopic model saved at: {models_dir}")
 
     def preprocess_and_enrich_topics(self, df, threshold=0.05):
         """
@@ -139,6 +159,8 @@ class TopicModeling:
 
             # Save all topic embeddings
             self.save_topic_embeddings()
+
+            self.save_model(name)
 
         except Exception as e:
             print(f"Error in topic modeling for {name}: {e}")

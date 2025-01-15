@@ -18,6 +18,7 @@ Ad Fontes says that they update their chart on a regular basis, so the script sh
 import random
 import requests
 import time
+import re
 from collections import defaultdict
 
 import pandas as pd
@@ -151,5 +152,5 @@ if __name__ == "__main__":
     rated_sources = get_all_rated_sources()
     scraped_info = get_reliability_and_bias_info(rated_sources)
     cleaned_data_df = clean_data(scraped_info)
-    cleaned_data_df.to_csv("adfontes_cleaned_sources_ratings.csv", index=False)
+    cleaned_data_df.to_csv("data/adfontes_clean.csv", index=False)
     print("--- Script Complete ---")
