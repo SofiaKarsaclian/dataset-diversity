@@ -11,6 +11,7 @@ from sklearn.decomposition import TruncatedSVD
 import inflect
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class EntityExtractor:
@@ -142,8 +143,6 @@ class EntityExtractor:
             yield data[i:i + batch_size]
 
     def clean_entities(self, entity_list):
-        if not entity_list:
-            return entity_list
 
         unique_entities = []
         seen_entities = set()
@@ -180,9 +179,6 @@ class EntityExtractor:
         """
         Clean and resolve entities with exception handling and disambiguation.
         """
-        if not entity_list:
-            return entity_list
-
         processed_entities = []
         exceptions = exceptions or self.exceptions
 
@@ -198,6 +194,8 @@ class EntityExtractor:
         return processed_entities
 
     def cluster_entities(self, df, min_cluster_size=30, min_samples=10, n_components=50):
+        np.random.seed(42)
+        
         df['has_entities'] = df['entities'].apply(lambda x: len(x) > 0)
         df_with_entities = df[df['has_entities']].copy()
         df_without_entities = df[~df['has_entities']].copy()
@@ -207,12 +205,18 @@ class EntityExtractor:
         X_sparse = vectorizer.fit_transform(df_with_entities['entities_str'])
 
         if n_components and n_components < X_sparse.shape[1]:
-            svd = TruncatedSVD(n_components=n_components)
+            svd = TruncatedSVD(n_components=n_components, random_state=42)
             X_reduced = svd.fit_transform(X_sparse)
+            df_with_entities['X_reduced'] = list(X_reduced) 
         else:
             X_reduced = X_sparse
+            df_with_entities['X_reduced'] = None
 
-        cluster_model = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, metric='euclidean', approx_min_span_tree=True)
+        cluster_model = HDBSCAN(min_cluster_size=min_cluster_size, 
+                                min_samples=min_samples, 
+                                metric='euclidean', 
+                                approx_min_span_tree=True)
+        
         df_with_entities['entity_cluster'] = cluster_model.fit_predict(X_reduced)
 
         df_without_entities['entity_cluster'] = None
