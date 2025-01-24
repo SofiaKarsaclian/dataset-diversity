@@ -7,10 +7,12 @@ from transformers import (
 from datasets import Dataset
 from torch.utils.data import DataLoader
 import torch
+import os
 from sklearn.metrics import matthews_corrcoef, accuracy_score
 from tqdm import tqdm
 import pandas as pd
 from checklist.utils import get_model_name
+from checklist.INV import PrejudiceTest
 
 
 class BaseTest(ABC):
@@ -136,19 +138,45 @@ class BaseTest(ABC):
         self.initialize_model(model_checkpoint=model_checkpoint)
 
         print("Running model on the test...")
-        result = self.test(test_data=self.test_data.copy())
-        result["preds"] = self.make_predictions(data=result)
+        result = self.test(test_data=self.test_data.copy())  # The test method adds predictions
 
-        # Calculate metrics
-        mcc = self.compute_metrics(result["label"], result["preds"])
-        acc = accuracy_score(result["label"], result["preds"])
-        missed = result[result["label"] != result["preds"]]
+        # If the test is a PrejudiceTest, calculate metrics for each category
+        if isinstance(self, PrejudiceTest):
+            for category in result["category"].unique():
+                category_data = result[result["category"] == category]
 
-        # Append metrics and missed examples to the shared results store
-        results_store.append({
-            "test": self.__class__.__name__,
-            "model": get_model_name(model_checkpoint),
-            "MCC": mcc,
-            "Accuracy": acc,
-            "Missed Examples": missed.to_dict(orient="records"),
-        })
+                # Calculate metrics for the current category
+                acc = accuracy_score(category_data["label"], category_data["preds"])
+                mcc = matthews_corrcoef(category_data["label"], category_data["preds"])
+
+                # Append metrics for the current category to the results
+                results_store.append({
+                    "test": self.__class__.__name__,
+                    "model": get_model_name(model_checkpoint),
+                    "category": category,
+                    "MCC": mcc,
+                    "Accuracy": acc,
+                })
+        else:
+            # Calculate general metrics (if it's not PrejudiceTest)
+            mcc = self.compute_metrics(result["label"], result["preds"])
+            acc = accuracy_score(result["label"], result["preds"])
+
+            # Append general metrics to the results store
+            results_store.append({
+                "test": self.__class__.__name__,
+                "model": get_model_name(model_checkpoint),
+                "category": None,
+                "MCC": mcc,
+                "Accuracy": acc,
+            })
+
+        # Save the results incrementally to the CSV file
+        result_df = pd.DataFrame(results_store)
+        file_path = "checklist/data/results.csv"
+        if os.path.exists(file_path):
+            result_df.to_csv(file_path, mode='a', header=False, index=False)
+        else:
+            result_df.to_csv(file_path, mode='w', header=True, index=False)
+
+        print(f"Results saved to {file_path} for {get_model_name(model_checkpoint)}.")
