@@ -41,14 +41,13 @@ for test in test_list:
     print(f"Running {test.__name__} on all models...")
     t = test("checklist/data")
 
-    # model_id = selected_model.id
-    # print(f"Running on {model_id}...")
-    # t.execute(model_id, results_store=results_store)
-    
     # Iterate over each model in the model list
-    for model_info in models:
+    for model_info in model_list:
         model_id = model_info.id
-        print(f"Running on {model_id}...")
-        t.execute(model_id, results_store=results_store)
+        try:
+            print(f"Running on {model_id}...")
+            t.execute(model_id, results_store=results_store)
+        except Exception as e:
+            print(f"Error while running {test.__name__} on {model_id}: {e}")
 
 print("All results have been saved to 'results.csv'.")

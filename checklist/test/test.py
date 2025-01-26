@@ -169,12 +169,15 @@ class BaseTest(ABC):
                 "Accuracy": acc,
             })
 
-        # Save the results incrementally to the CSV file
-        result_df = pd.DataFrame(results_store)
+        # Save incrementally to the CSV file
         file_path = "checklist/data/results.csv"
+        new_data = pd.DataFrame(results_store)
+
         if os.path.exists(file_path):
-            result_df.to_csv(file_path, mode='a', header=False, index=False)
+            # Append new data without overwriting the file
+            new_data.to_csv(file_path, mode="a", header=False, index=False)
         else:
-            result_df.to_csv(file_path, mode='w', header=True, index=False)
+            # Create a new file with headers
+            new_data.to_csv(file_path, mode="w", header=True, index=False)
 
         print(f"Results saved to {file_path} for {get_model_name(model_checkpoint)}.")
