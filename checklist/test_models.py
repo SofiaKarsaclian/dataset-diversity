@@ -1,5 +1,5 @@
 import sys
-sys.path.append('C:/Users/sofik/Documents/Uni Konstanz/SEDS/Thesis/master-thesis')
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from checklist.DIR import LoadedTest
 from checklist.INV import LocationsTest, PrejudiceTest, PronounsTest
