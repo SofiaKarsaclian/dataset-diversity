@@ -1,1 +1,1 @@
-from checklist.test.test import BaseTest
+#from checklist.test.test import BaseTest

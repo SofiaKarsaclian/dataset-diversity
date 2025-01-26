@@ -12,8 +12,6 @@ from sklearn.metrics import matthews_corrcoef, accuracy_score
 from tqdm import tqdm
 import pandas as pd
 from checklist.utils import get_model_name
-from checklist.INV import PrejudiceTest
-
 
 class BaseTest(ABC):
     """
@@ -140,8 +138,8 @@ class BaseTest(ABC):
         print("Running model on the test...")
         result = self.test(test_data=self.test_data.copy())  # The test method adds predictions
 
-        # If the test is a PrejudiceTest, calculate metrics for each category
-        if isinstance(self, PrejudiceTest):
+        test_type = self.__class__.__name__  # Get the test type dynamically
+        if test_type == "PrejudiceTest":
             for category in result["category"].unique():
                 category_data = result[result["category"] == category]
 
@@ -158,7 +156,7 @@ class BaseTest(ABC):
                     "Accuracy": acc,
                 })
         else:
-            # Calculate general metrics (if it's not PrejudiceTest)
+            # Calculate general metrics (for other test types)
             mcc = self.compute_metrics(result["label"], result["preds"])
             acc = accuracy_score(result["label"], result["preds"])
 

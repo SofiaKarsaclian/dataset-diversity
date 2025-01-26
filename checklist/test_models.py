@@ -31,7 +31,7 @@ test_list = [
 #         print(f"running on {model_id} ...")
 #         t.execute(model_id)
 
-selected_model = model_list[1]
+# selected_model = model_list[1]
 
 results_store = []
 
@@ -40,14 +40,14 @@ for test in test_list:
     print(f"Running {test.__name__} on all models...")
     t = test("checklist/data")
 
-    model_id = selected_model.id
-    print(f"Running on {model_id}...")
-    t.execute(model_id, results_store=results_store)
+    # model_id = selected_model.id
+    # print(f"Running on {model_id}...")
+    # t.execute(model_id, results_store=results_store)
     
     # Iterate over each model in the model list
-    # for model_info in models:
-    #     model_id = model_info.id
-    #     print(f"Running on {model_id}...")
-    #     t.execute(model_id, results_store=results_store)
+    for model_info in models:
+        model_id = model_info.id
+        print(f"Running on {model_id}...")
+        t.execute(model_id, results_store=results_store)
 
 print("All results have been saved to 'results.csv'.")
