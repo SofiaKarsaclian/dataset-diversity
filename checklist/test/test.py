@@ -8,7 +8,7 @@ from datasets import Dataset
 from torch.utils.data import DataLoader
 import torch
 import os
-from sklearn.metrics import matthews_corrcoef, accuracy_score
+from sklearn.metrics import matthews_corrcoef, accuracy_score, f1_score
 from tqdm import tqdm
 import pandas as pd
 from checklist.utils import get_model_name
@@ -139,45 +139,76 @@ class BaseTest(ABC):
         result = self.test(test_data=self.test_data.copy())  # The test method adds predictions
 
         test_type = self.__class__.__name__  # Get the test type dynamically
+        file_path = "checklist/data/results.csv"
+
+        # Load existing results if the file exists
+        existing_results = pd.read_csv(file_path) if os.path.exists(file_path) else pd.DataFrame()
+
         if test_type == "PrejudiceTest":
             for category in result["category"].unique():
                 category_data = result[result["category"] == category]
 
-                # Calculate metrics for the current category
-                acc = accuracy_score(category_data["label"], category_data["preds"])
-                mcc = matthews_corrcoef(category_data["label"], category_data["preds"])
+                for category_minority in category_data["category_minority"].unique():
+                    sub_data = category_data[category_data["category_minority"] == category_minority]
 
-                # Append metrics for the current category to the results
-                results_store.append({
-                    "test": self.__class__.__name__,
-                    "model": get_model_name(model_checkpoint),
-                    "category": category,
-                    "MCC": mcc,
-                    "Accuracy": acc,
-                })
+                    # Calculate metrics for the current category and category_minority
+                    acc = accuracy_score(sub_data["label"], sub_data["preds"])
+                    mcc = matthews_corrcoef(sub_data["label"], sub_data["preds"])
+                    f1 = f1_score(sub_data["label"], sub_data["preds"])
+
+                    # Prepare the new row
+                    new_row = {
+                        "test": self.__class__.__name__,
+                        "model": get_model_name(model_checkpoint),
+                        "category": category,
+                        "category_minority": category_minority,
+                        "MCC": mcc,
+                        "F1": f1,
+                        "Accuracy": acc,
+                    }
+
+                    # Check for duplicates
+                    if not existing_results.empty and not existing_results[
+                        (existing_results["test"] == new_row["test"]) &
+                        (existing_results["model"] == new_row["model"]) &
+                        (existing_results["category"] == new_row["category"]) &
+                        (existing_results["category_minority"] == new_row["category_minority"])
+                    ].empty:
+                        continue  # Skip saving if the row already exists
+
+                    # Append new row to the results
+                    results_store.append(new_row)
+
         else:
             # Calculate general metrics (for other test types)
-            mcc = self.compute_metrics(result["label"], result["preds"])
             acc = accuracy_score(result["label"], result["preds"])
+            mcc = matthews_corrcoef(result["label"], result["preds"])
+            f1 = f1_score(result["label"], result["preds"])
 
-            # Append general metrics to the results store
-            results_store.append({
+            # Prepare the new row
+            new_row = {
                 "test": self.__class__.__name__,
                 "model": get_model_name(model_checkpoint),
                 "category": None,
+                "category_minority": None,
                 "MCC": mcc,
+                "F1": f1,
                 "Accuracy": acc,
-            })
+            }
+
+            # Check for duplicates
+            if not existing_results.empty and not existing_results[
+                (existing_results["test"] == new_row["test"]) &
+                (existing_results["model"] == new_row["model"])
+            ].empty:
+                return  # Skip saving if the row already exists
+
+            # Append new row to the results
+            results_store.append(new_row)
 
         # Save incrementally to the CSV file
-        file_path = "checklist/data/results.csv"
         new_data = pd.DataFrame(results_store)
-
-        if os.path.exists(file_path):
-            # Append new data without overwriting the file
-            new_data.to_csv(file_path, mode="a", header=False, index=False)
-        else:
-            # Create a new file with headers
-            new_data.to_csv(file_path, mode="w", header=True, index=False)
+        if not new_data.empty:
+            new_data.to_csv(file_path, mode="a", header=not os.path.exists(file_path), index=False)
 
         print(f"Results saved to {file_path} for {get_model_name(model_checkpoint)}.")

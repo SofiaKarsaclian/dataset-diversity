@@ -32,7 +32,7 @@ test_list = [
 #         print(f"running on {model_id} ...")
 #         t.execute(model_id)
 
-# selected_model = model_list[1]
+selected_model = model_list[1]
 
 results_store = []
 
@@ -44,6 +44,7 @@ for test in test_list:
     # Iterate over each model in the model list
     for model_info in model_list:
         model_id = model_info.id
+
         try:
             print(f"Running on {model_id}...")
             t.execute(model_id, results_store=results_store)
