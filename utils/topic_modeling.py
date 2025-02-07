@@ -61,7 +61,7 @@ class TopicModeling:
             stop_words="english"
         )
 
-        model_id = 'meta-llama/Llama-3.1-8B'
+        model_id = 'meta-llama/Meta-Llama-3-8B'
         device = f'cuda:{cuda.current_device()}' if cuda.is_available() else 'cpu'
 
         print(device)
