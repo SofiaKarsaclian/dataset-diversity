@@ -219,7 +219,7 @@ class SubsetGenerator:
         os.makedirs(base_path, exist_ok=True)
 
         # Define the file path for saving
-        pickle_file_path = os.path.join(base_path, f"{dataset_name}_subsamples.pkl")
+        pickle_file_path = os.path.join(base_path, f"{dataset_name}.pkl")
 
         # Save the subsamples dictionary to a pickle file
         with open(pickle_file_path, 'wb') as f:

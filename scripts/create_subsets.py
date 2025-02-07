@@ -7,9 +7,9 @@ from sklearn.model_selection import train_test_split
 
 
 datasets = {
-    "annomatic": pd.read_parquet('data/enriched/annomatic_full.parquet'),
-    "babe": pd.read_parquet('data/enriched/babe_full.parquet'),
-    "basil": pd.read_parquet('data/enriched/basil_full.parquet')
+    #"annomatic": pd.read_parquet('data/enriched/annomatic_topics.parquet'),
+    "babe": pd.read_parquet('data/enriched/babe_topics.parquet'),
+    #"basil": pd.read_parquet('data/enriched/basil_topics.parquet')
 }
 
 # keep only majority vote 
@@ -24,17 +24,17 @@ def split_train_test(df, test_size=500):
     return train_df, test_df
 
 babe_train, babe_test = split_train_test(datasets['babe'])
-basil_train, basil_test = split_train_test(datasets['basil'])
+#basil_train, basil_test = split_train_test(datasets['basil'])
 
 datasets['babe'] = babe_train 
-datasets['basil'] = basil_train
+#datasets['basil'] = basil_train
 
 output_dir = "data/processed/test_sets"
 os.makedirs(output_dir, exist_ok=True)
 
 # Save the parquet files
 babe_test.to_parquet(os.path.join(output_dir, "babe_test.parquet"))
-basil_test.to_parquet(os.path.join(output_dir, "basil_test.parquet"))
+#basil_test.to_parquet(os.path.join(output_dir, "basil_test.parquet"))
 
 print("Generated split and saved test sets...")
 
@@ -64,13 +64,35 @@ for dataset_name, df in datasets.items():
 
     # Topic subsets
     print(f"  Generating topic-based subsets for {dataset_name}")
+
+    # import topic embeddings
+    file_path= "data/enriched/topic_embeddings.pkl"
+    topic_embeddings = pd.read_pickle(file_path)
+
+
+    embeddings = []
+    for key, embedding in topic_embeddings.items():
+        parts = key.split('_')
+        dataset_name = parts[0]  
+        topic = '_'.join(parts[2:]) 
+        embeddings.append({
+            'dataset_name': dataset_name,
+            'topic': topic,
+            'embedding': embedding
+        })
+
+    for dataset_name, df in datasets.items():
+        dataset_embeddings = [e for e in embeddings if e['dataset_name'] == dataset_name]
+        topic_to_embedding = {e['topic']: e['embedding'] for e in dataset_embeddings}
+        df['topic_embedding'] = df['topic'].map(topic_to_embedding)
+
     topic_subsamples = subset_generator.create_subsets(
         dimension="topic", 
         rep=rep, 
         subset_size=subset_size, 
         alpha_values=alpha_values, 
         score_function=subset_generator.vendi_score_topic, 
-        embedding_column="sentence_embedding"
+        embedding_column="topic_embedding" # cos similarity between topics embeddings
     )
     topic_scores = subset_generator.process_vendi_scores(topic_subsamples)
     subset_generator.save_subsamples(topic_subsamples, f"{dataset_name}_topic_subsamples")

@@ -18,7 +18,7 @@ model_list = list(models)
 results_store = []
 
 
-print(f"Running Prejudice Test on all models...")
+print("Running Prejudice Test on all models...")
 t = PrejudiceTest("checklist/data")
 
 # Iterate over each model in the model list
