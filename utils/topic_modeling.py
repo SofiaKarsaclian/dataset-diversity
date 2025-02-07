@@ -74,20 +74,20 @@ class TopicModeling:
         )
 
                 # Llama 2 Tokenizer
-        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
 
         # Llama 2 Model
-        model = transformers.AutoModelForCausalLM.from_pretrained(
+        self.model = transformers.AutoModelForCausalLM.from_pretrained(
             model_id,
             trust_remote_code=True,
             quantization_config=bnb_config,
             device_map='auto',
         )
-        model.eval()
+        self.model.eval()
 
         # Our text generator
-        generator = transformers.pipeline(
-            model=model, tokenizer=tokenizer,
+        self.generator  = transformers.pipeline(
+            model=self.model, tokenizer=self.tokenizer,
             task='text-generation',
             temperature=0.1,
             max_new_tokens=500,
@@ -128,9 +128,9 @@ class TopicModeling:
             """
 
         prompt = system_prompt + example_prompt + main_prompt
-        llama2 = TextGeneration(generator, prompt=prompt)
+        self.llama2 = TextGeneration(self.generator, prompt=prompt)
 
-        self.representation_model= {"llama2": llama2}
+        self.representation_model= {"llama2": self.llama2}
 
         self.topic_model = BERTopic(
             umap_model=self.umap_model,
