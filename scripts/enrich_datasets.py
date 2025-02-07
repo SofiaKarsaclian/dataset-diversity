@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.topic_modeling import TopicModeling
 
 datasets_file_paths = {
-    #"annomatic": "data/processed/annomatic.csv",
+    "annomatic": "data/processed/annomatic.csv",
     "babe": "data/processed/babe.csv",
     #"basil": "data/processed/basil.csv"
 }
