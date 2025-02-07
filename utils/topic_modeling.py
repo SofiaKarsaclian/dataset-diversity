@@ -13,7 +13,10 @@ from gensim.corpora.dictionary import Dictionary
 from gensim.utils import simple_preprocess
 from bertopic.representation import TextGeneration
 from ctransformers import AutoModelForCausalLM
+from torch import bfloat16
+import transformers
 
+from torch import cuda
 
 
 
@@ -42,7 +45,7 @@ class TopicModeling:
         print("Initializing model...")
         self.umap_model = UMAP(
             n_neighbors=8,
-            n_components=5,
+            n_components=2,
             min_dist=0.05,
             random_state=42
         )
@@ -59,40 +62,74 @@ class TopicModeling:
             stop_words="english"
         )
 
-        gpu_available = torch.cuda.is_available()
-        gpu_layers = 0  # Default to 0 (no GPU acceleration)
-        if gpu_available:          
-            gpu_layers = 50
+        model_id = 'meta-llama/Llama-2-7b-chat-hf'
+        device = f'cuda:{cuda.current_device()}' if cuda.is_available() else 'cpu'
 
-        # Set gpu_layers to the number of layers to offload to GPU. Set to 0 if no GPU acceleration is available on your system.
-        model = AutoModelForCausalLM.from_pretrained(
-            "TheBloke/zephyr-7B-alpha-GGUF",
-            model_file="zephyr-7b-alpha.Q4_K_M.gguf",
-            model_type="mistral",
-            gpu_layers=gpu_layers,
-            hf=True
+        print(device)
+
+        bnb_config = transformers.BitsAndBytesConfig(
+            load_in_4bit=True,  # 4-bit quantization
+            bnb_4bit_quant_type='nf4',  # Normalized float 4
+            bnb_4bit_use_double_quant=True,  # Second quantization after the first
+            bnb_4bit_compute_dtype=bfloat16  # Computation type
         )
-        tokenizer = AutoTokenizer.from_pretrained("HuggingFaceH4/zephyr-7b-alpha")
 
-        # Pipeline
-        generator = pipeline(
+                # Llama 2 Tokenizer
+        tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
+
+        # Llama 2 Model
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            model_id,
+            trust_remote_code=True,
+            quantization_config=bnb_config,
+            device_map='auto',
+        )
+        model.eval()
+
+        # Our text generator
+        generator = transformers.pipeline(
             model=model, tokenizer=tokenizer,
             task='text-generation',
-            max_new_tokens=50,
+            temperature=0.1,
+            max_new_tokens=500,
             repetition_penalty=1.1
         )
 
-        prompt = """<|system|>You are a helpful, respectful and honest assistant for labeling topics..</s>
-         <|user|>
-         I have a topic that contains the following documents:
-        [DOCUMENTS]
+        # System prompt describes information given to all conversations
+        system_prompt = """
+            <s>[INST] <<SYS>>
+            You are a helpful, respectful and honest assistant for labeling topics.
+            <</SYS>>
+            """
+        
+        # Example prompt demonstrating the output we are looking for
+        example_prompt = """
+            I have a topic that contains the following documents:
+            - Traditional diets in most cultures were primarily plant-based with a little meat on top, but with the rise of industrial style meat production and factory farming, meat has become a staple food.
+            - Meat, but especially beef, is the word food in terms of emissions.
+            - Eating meat doesn't make you a bad person, not eating meat doesn't make you a good one.
 
-        The topic is described by the following keywords: '[KEYWORDS]'.
+            The topic is described by the following keywords: 'meat, beef, eat, eating, emissions, steak, food, health, processed, chicken'.
 
-        Based on the information about the topic above, please create a short label of this topic. Make sure you to only return the label and nothing more.</s>
-        <|assistant|>"""
-        zephyr = TextGeneration(generator, prompt=prompt)
-        self.representation_model = {"Zephyr": zephyr}
+            Based on the information about the topic above, please create a short label of this topic. Make sure you to only return the label and nothing more.
+
+            [/INST] Environmental impacts of eating meat
+            """
+        
+        # Our main prompt with documents ([DOCUMENTS]) and keywords ([KEYWORDS]) tags
+        main_prompt = """
+            [INST]
+            I have a topic that contains the following documents:
+            [DOCUMENTS]
+
+            The topic is described by the following keywords: '[KEYWORDS]'.
+
+            Based on the information about the topic above, please create a short label of this topic. Make sure you to only return the label and nothing more.
+            [/INST]
+            """
+
+        prompt = system_prompt + example_prompt + main_prompt
+        llama2 = TextGeneration(generator, prompt=prompt)
 
         self.topic_model = BERTopic(
             umap_model=self.umap_model,
@@ -102,7 +139,7 @@ class TopicModeling:
             top_n_words=45,
             language='english',
             calculate_probabilities=True,
-            representation_model=self.representation_model,
+            representation_model=llama2,
             verbose=True
         )
         os.makedirs(self.output_dir, exist_ok=True)
