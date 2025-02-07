@@ -61,7 +61,7 @@ class TopicModeling:
             stop_words="english"
         )
 
-        model_id = 'meta-llama/Meta-Llama-3-8B'
+        model_id = 'meta-llama/Llama-2-7b-chat-hf'
         device = f'cuda:{cuda.current_device()}' if cuda.is_available() else 'cpu'
 
         print(device)
@@ -130,6 +130,8 @@ class TopicModeling:
         prompt = system_prompt + example_prompt + main_prompt
         llama2 = TextGeneration(generator, prompt=prompt)
 
+        self.representation_model= {"llama2": llama2}
+
         self.topic_model = BERTopic(
             umap_model=self.umap_model,
             hdbscan_model=self.hdbscan_model,
@@ -138,7 +140,7 @@ class TopicModeling:
             top_n_words=45,
             language='english',
             calculate_probabilities=True,
-            representation_model=llama2,
+            representation_model=self.representation_model,
             verbose=True
         )
         os.makedirs(self.output_dir, exist_ok=True)
