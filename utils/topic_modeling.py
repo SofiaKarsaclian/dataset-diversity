@@ -12,7 +12,6 @@ from gensim.models.coherencemodel import CoherenceModel
 from gensim.corpora.dictionary import Dictionary
 from gensim.utils import simple_preprocess
 from bertopic.representation import TextGeneration
-from ctransformers import AutoModelForCausalLM
 from torch import bfloat16
 import transformers
 
@@ -62,7 +61,7 @@ class TopicModeling:
             stop_words="english"
         )
 
-        model_id = 'meta-llama/Llama-2-7b-chat-hf'
+        model_id = 'meta-llama/Llama-3.1-8B'
         device = f'cuda:{cuda.current_device()}' if cuda.is_available() else 'cpu'
 
         print(device)
