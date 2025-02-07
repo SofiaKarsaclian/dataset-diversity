@@ -59,12 +59,17 @@ class TopicModeling:
             stop_words="english"
         )
 
+        gpu_available = torch.cuda.is_available()
+        gpu_layers = 0  # Default to 0 (no GPU acceleration)
+        if gpu_available:          
+            gpu_layers = 50
+
         # Set gpu_layers to the number of layers to offload to GPU. Set to 0 if no GPU acceleration is available on your system.
         model = AutoModelForCausalLM.from_pretrained(
             "TheBloke/zephyr-7B-alpha-GGUF",
             model_file="zephyr-7b-alpha.Q4_K_M.gguf",
             model_type="mistral",
-            gpu_layers=0,
+            gpu_layers=gpu_layers,
             hf=True
         )
         tokenizer = AutoTokenizer.from_pretrained("HuggingFaceH4/zephyr-7b-alpha")
