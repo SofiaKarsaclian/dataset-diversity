@@ -7,16 +7,13 @@ from umap import UMAP
 from hdbscan import HDBSCAN
 from sklearn.feature_extraction.text import CountVectorizer
 import torch
-from transformers import AutoTokenizer, pipeline
 from gensim.models.coherencemodel import CoherenceModel
 from gensim.corpora.dictionary import Dictionary
 from gensim.utils import simple_preprocess
 from bertopic.representation import TextGeneration
 from torch import bfloat16
 import transformers
-
 from torch import cuda
-
 
 
 

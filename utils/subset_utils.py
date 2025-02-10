@@ -33,7 +33,7 @@ class SubsetGenerator:
 
     def vendi_score_source(self, df):
         """
-        Calculate Vendi Score for source dimension using Euclidean distance on reliability and bias.
+        Calculate Vendi Score for source dimension using Manhattan distance on reliability and bias.
 
         Parameters:
         - df (pd.DataFrame): DataFrame containing 'reliability' and 'bias' columns.
@@ -42,49 +42,23 @@ class SubsetGenerator:
         - float: Vendi Score for sources.
         """
         features = df[['reliability', 'bias']].to_numpy()
-        distances = np.sqrt(np.sum((features[:, np.newaxis] - features[np.newaxis, :]) ** 2, axis=-1))
+        #distances = np.sqrt(np.sum((features[:, np.newaxis] - features[np.newaxis, :]) ** 2, axis=-1))
+        # manhattan
+        distances = np.sum(np.abs(features[:, np.newaxis] - features[np.newaxis, :]), axis=-1)
         similarity_matrix = 1 / (1 + distances)
         return vendi.score_K(similarity_matrix)
 
-    def vendi_score_topic(self, df, embedding_column):
+    def vendi_score_topic(self, df):
         """
         Calculate Vendi Score for topic using cosine similarity between topic embeddings.
         """
-        df = df.dropna(subset=[embedding_column])  # Drop rows where embedding is NaN
-
-        # Stack the embeddings into a matrix (n_samples, embedding_dim)
-        embeddings = np.stack(df[embedding_column].values)
-
-        # Compute the cosine similarity matrix
-        cosine_sim_matrix = cosine_similarity(embeddings)
-        vendi_score = vendi.score_K(cosine_sim_matrix)
+        similarity_matrix= cosine_similarity(np.stack(df["C-TF-IDF"]))
+        vendi_score = vendi.score_K(similarity_matrix)
 
         return vendi_score
 
-    def vendi_score_entities(self, df):
-        """
-        Calculate Vendi Score for entities using Jaccard similarity
-        """
-        df = df.dropna(subset=['entities'])
-        entity_sets = df['entities'].apply(lambda entities: set(entity.lower() for entity in entities)).tolist()
-        n = len(entity_sets)
 
-        # Create a matrix to store entity set intersections
-        intersection_matrix = np.zeros((n, n), dtype=int)
-
-        for i, set_i in enumerate(entity_sets):
-            intersection_matrix[i, :] = [len(set_i.intersection(set_j)) for set_j in entity_sets]
-
-        union_sizes = np.array([len(set_i.union(set_j)) for set_i in entity_sets for set_j in entity_sets]).reshape(n, n)
-
-        # Calculate similarity matrix (avoiding division by zero)
-        similarity_matrix = np.where(union_sizes == 0, 0, intersection_matrix / union_sizes)
-
-        vs = vendi.score_K(similarity_matrix)
-
-        return vs
-
-    def create_subsets(self, dimension, rep, subset_size, alpha_values, score_function, embedding_column=None):
+    def create_subsets(self, dimension, rep, subset_size, alpha_values, score_function):
         """
         Generate subsets of data using Dirichlet distributions for sampling proportions.
 
@@ -95,7 +69,6 @@ class SubsetGenerator:
         - subset_size (int): The total number of samples to draw for each subset.
         - alpha_values (list): List of alpha values for the Dirichlet distribution.
         - score_function (function): Function to calculate Vendi Score (e.g., vendi_score_source or vendi_score_topic).
-        - embedding_column (str, optional): Column name for embeddings, required for topics.
 
         Returns:
         - dict: Dictionary where keys are subset identifiers and values are dicts containing data and Vendi scores.
@@ -138,7 +111,7 @@ class SubsetGenerator:
 
                 if sampled_data:
                     subset_df = pd.concat(sampled_data)
-                    vendi_score = score_function(subset_df, embedding_column) if embedding_column else score_function(subset_df)
+                    vendi_score = score_function(subset_df)
                     alpha_name = str(alpha).replace('.', '_')
                     subsamples[f"alpha_{alpha_name}_idx_{idx}"] = {
                         "data": subset_df,
@@ -177,7 +150,7 @@ class SubsetGenerator:
 
             if sampled_data:
                 subset_df = pd.concat(sampled_data)
-                vendi_score = score_function(subset_df, embedding_column) if embedding_column else score_function(subset_df)
+                vendi_score = score_function(subset_df)
                 subsamples[f"alpha_inf_idx_{idx+1}"] = {
                     "data": subset_df,
                     "vs": round(vendi_score, 3)
@@ -209,7 +182,7 @@ class SubsetGenerator:
             "subsample": subset_keys,
             "alpha": alphas,
             "vs": vendi_scores,
-            "normalized_vs": normalized_scores,
+            "normalized_vs": normalized_scores
         })
 
     def save_subsamples(self, subsamples, dataset_name, base_path="data/subsamples"):
