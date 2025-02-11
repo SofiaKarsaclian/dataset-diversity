@@ -50,7 +50,7 @@ def enrich_dataset(name, path):
     df['topic'] = df['topic'].map(topic_modeling.topic_model.topic_labels_)
     df['topic'] = df['topic'].apply(lambda x: np.nan if '-1' in str(x) else x)
 
-    sentence_embeddings = topic_modeling.topic_model.embedding_model.encode(df['text'].tolist())
+    sentence_embeddings = topic_modeling.embedding_model.encode(df['text'].tolist())
     df['sentence_embedding'] = list(sentence_embeddings)
 
     # Clean labels
@@ -63,7 +63,7 @@ def enrich_dataset(name, path):
     
     emb = np.vstack(df["sentence_embedding"].to_numpy())
     
-    fig_doc = topic_modeling.topic_model.visualize_topics(texts, embeddings=emb, hide_annotations=True, hide_document_hover=False, custom_labels=True,
+    fig_doc = topic_modeling.topic_model.visualize_documents(texts, embeddings=emb, hide_annotations=True, hide_document_hover=False, custom_labels=True,
                                                           title=f'<b>{name} Documents and Topics</b>')
     fig_doc.write_html(f"data/visualizations/{name}_docs.html")
 

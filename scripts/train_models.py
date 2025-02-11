@@ -64,8 +64,9 @@ def train_subsamples(subsamples_dataset, dataset_name, test_set, dev_set=None):
     hf_token = HfFolder.get_token()
 
     for name, subset in subsamples_dataset.items():
-        df = subset["data"]
-        df_vs = subset.get("vs", None)
+      for subsample_name, data in subset.items():
+        df = data["data"]
+        df_vs = data.get("vs", None)
 
         if dev_set is None:
             # If no dev set is explicitly provided, split test_set to create one
@@ -79,10 +80,10 @@ def train_subsamples(subsamples_dataset, dataset_name, test_set, dev_set=None):
         test_df = convert_to_hf_dataset(test_df, tokenizer)
 
         # Define a unique Hugging Face repo name
-        hf_model_id = f"{dataset_name}_model_{name}"
+        hf_model_id = f"{name}_model_{subsample_name}"
 
         training_args = TrainingArguments(
-            output_dir=None,  # Do not save locally
+            output_dir=output_dir, 
             per_device_eval_batch_size=32,
             per_device_train_batch_size=32,
             num_train_epochs=3,
