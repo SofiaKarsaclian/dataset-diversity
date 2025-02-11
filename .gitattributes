@@ -1,3 +1,0 @@
-*.parquet filter=lfs diff=lfs merge=lfs -text
-data/enriched/annomatic_topics.parquet filter=lfs diff=lfs merge=lfs -text
-*.parquet !text !filter !merge !diff
