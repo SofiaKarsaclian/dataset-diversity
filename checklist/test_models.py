@@ -11,10 +11,15 @@ from huggingface_hub import HfApi
 api = HfApi()
 models = api.list_models(
     author= "skarsa",
-    search= "annomatic"
+    #search= "babe"
 )
 
-model_list = list(models)
+substrings = ["babe", "annomatic"]
+model_list = [model for model in models if any(sub in model.id for sub in substrings)]
+
+# Print out the filtered model names
+print("Filtered Models:", [model.id for model in model_list])
+#model_list = list(models)
 
 test_list = [
     LoadedTest,
@@ -32,7 +37,6 @@ test_list = [
 #         print(f"running on {model_id} ...")
 #         t.execute(model_id)
 
-selected_model = model_list[1]
 
 results_store = []
 
@@ -47,7 +51,7 @@ for test in test_list:
 
         try:
             print(f"Running on {model_id}...")
-            t.execute(model_id, results_store=results_store)
+            t.execute(model_id)
         except Exception as e:
             print(f"Error while running {test.__name__} on {model_id}: {e}")
 

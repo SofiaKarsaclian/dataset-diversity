@@ -28,6 +28,7 @@ class BaseTest(ABC):
     def __init__(self, data_path):
         self.data_path = data_path
         self.test_data = None
+        self.results_store = []
 
     def make_predictions(self, data=None, target_col: str = "text"):
         """
@@ -118,16 +119,11 @@ class BaseTest(ABC):
         raise NotImplementedError
 
     
-    def execute(self, model_checkpoint: str, results_store: list):
+    def execute(self, model_checkpoint: str):
         """
         Executes the test on the given model and appends results to a shared list.
-
         Args:
             model_checkpoint (str): The model to be tested.
-            results_store (list): A list to store results for all models.
-
-        Returns:
-            None
         """
         if self.test_data is None:
             print("Preparing test data...")
@@ -138,12 +134,17 @@ class BaseTest(ABC):
         print("Running model on the test...")
         result = self.test(test_data=self.test_data.copy())  # The test method adds predictions
 
-        test_type = self.__class__.__name__  # Get the test type dynamically
-        file_path = "checklist/data/results.csv"
+        test_type = self.__class__.__name__  
+        drive_path = "/content/drive/MyDrive/your_results_folder" # for running in GoogleColab
+        os.makedirs(drive_path, exist_ok=True)
+
+        # Define the results file path in Google Drive
+        file_path = os.path.join(drive_path, "results.csv")
 
         # Load existing results if the file exists
         existing_results = pd.read_csv(file_path) if os.path.exists(file_path) else pd.DataFrame()
 
+        # Check if it's a PrejudiceTest and handle category-based results
         if test_type == "PrejudiceTest":
             for category in result["category"].unique():
                 category_data = result[result["category"] == category]
@@ -167,20 +168,12 @@ class BaseTest(ABC):
                         "Accuracy": acc,
                     }
 
-                    # Check for duplicates
-                    if not existing_results.empty and not existing_results[
-                        (existing_results["test"] == new_row["test"]) &
-                        (existing_results["model"] == new_row["model"]) &
-                        (existing_results["category"] == new_row["category"]) &
-                        (existing_results["category_minority"] == new_row["category_minority"])
-                    ].empty:
-                        continue  # Skip saving if the row already exists
-
-                    # Append new row to the results
-                    results_store.append(new_row)
+                    # Add new row to results_store if not already present
+                    if not self.check_duplicate(existing_results, new_row):
+                        self.results_store.append(new_row)
 
         else:
-            # Calculate general metrics (for other test types)
+            # Calculate general metrics for other test types
             acc = accuracy_score(result["label"], result["preds"])
             mcc = matthews_corrcoef(result["label"], result["preds"])
             f1 = f1_score(result["label"], result["preds"])
@@ -196,19 +189,30 @@ class BaseTest(ABC):
                 "Accuracy": acc,
             }
 
-            # Check for duplicates
-            if not existing_results.empty and not existing_results[
-                (existing_results["test"] == new_row["test"]) &
-                (existing_results["model"] == new_row["model"])
-            ].empty:
-                return  # Skip saving if the row already exists
+            # Add new row to results_store if not already present
+            if not self.check_duplicate(existing_results, new_row):
+                self.results_store.append(new_row)
 
-            # Append new row to the results
-            results_store.append(new_row)
-
-        # Save incrementally to the CSV file
-        new_data = pd.DataFrame(results_store)
+        # Save the results incrementally to the Google Drive file
+        new_data = pd.DataFrame(self.results_store)
         if not new_data.empty:
-            new_data.to_csv(file_path, mode="a", header=not os.path.exists(file_path), index=False)
+            # Concatenate new results with existing data
+            all_results = pd.concat([existing_results, new_data], ignore_index=True)
 
-        print(f"Results saved to {file_path} for {get_model_name(model_checkpoint)}.")
+            # Remove duplicates
+            all_results.drop_duplicates(subset=["test", "model", "category", "category_minority"], keep="last", inplace=True)
+
+            # Save the cleaned data to Google Drive
+            all_results.to_csv(file_path, index=False)
+            print(f"Results saved to {file_path} for {get_model_name(model_checkpoint)}.")
+
+    def check_duplicate(self, existing_results, new_row):
+        """
+        Checks if the new row already exists in the existing results.
+        """
+        return not existing_results.empty and not existing_results[
+            (existing_results["test"] == new_row["test"]) &
+            (existing_results["model"] == new_row["model"]) &
+            (existing_results["category"] == new_row["category"]) &
+            (existing_results["category_minority"] == new_row["category_minority"])
+        ].empty
