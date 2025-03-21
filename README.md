@@ -5,8 +5,3 @@ This repository contains the code, datasets, and supplementary materials for the
 
 The thesis explores the role of dataset diversity in training models for detecting bias in media content. It examines how diversity in source and topic coverage affects the model's ability to generalize across different types of content and its downstream performance in bias detection tasks. By assessing how various dimensions of diversity contribute to model fairness, accuracy, and robustness, this work aims to provide insights into how dataset curation practices can improve the reliability and fairness of bias detection systems.
 
-## Repository Structure (complete)
-
-```
-|- README.md
-```
